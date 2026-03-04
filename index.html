@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Family-Fin Cloud</title>
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+   <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="style.css">
+
+
+</head>
+<body>
+
+     <!-- NEW: Floating Notification Container -->
+    <div id="notification-container"></div>
+    
+    <!-- NEW: LOADING VIEW (Visible by default) -->
+    <div id="loading-view">
+        <div class="loader"></div>
+    </div>
+
+    <!-- AUTHENTICATION VIEW -->
+  <!-- AUTHENTICATION VIEW -->
+<div id="auth-view" style="display:none;">
+    <div class="auth-card">
+        <div class="auth-title" id="auth-title-text">Family-Fin Cloud</div>
+        <p id="auth-subtitle" style="color:var(--text-secondary); margin-bottom:1.5rem;">Secure Family Expense Tracker</p>
+        
+        <form id="auth-form">
+            <!-- Name Input (Hidden for Login) -->
+            <input type="text" id="auth-name" class="auth-input" placeholder="Family Name (e.g. Zakir Paribar)" style="display:none;">
+            
+            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address" required>
+            
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Password" required>
+            
+            <!-- Forgot Password Link (Hidden for Sign Up) -->
+            <div id="forgot-pass-link" style="text-align:right; margin-bottom:1.2rem; margin-top:-0.5rem;">
+                <span onclick="UI.openResetModal()" style="color:var(--text-tertiary); font-size:0.85rem; cursor:pointer; transition:color 0.3s;">Forgot Password?</span>
+            </div>
+
+            <button type="submit" class="btn-primary" id="auth-btn">Login</button>
+        </form>
+
+        <div style="margin-top:1.5rem; font-size:0.9rem; color:var(--text-secondary);">
+            <span id="auth-toggle-text">New here? </span>
+            <span id="auth-toggle-btn" onclick="Auth.toggle()" style="color:var(--primary); cursor:pointer; font-weight:600;">Create Account</span>
+        </div>
+        <div id="auth-error" style="color: var(--accent-red); margin-top: 15px; font-size: 0.9rem; min-height:1.2rem;"></div>
+    </div>
+</div>
+
+<!-- NEW: RESET PASSWORD MODAL -->
+<div id="reset-modal" class="modal-overlay">
+    <div class="bottom-sheet">
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+            <h3>Reset Password</h3>
+            <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+        </div>
+        <p style="color:var(--text-secondary); margin-bottom:1rem; font-size:0.9rem;">
+            Enter your email address and we will send you a link to reset your password.
+        </p>
+        <form id="reset-form">
+            <input type="email" id="reset-email" class="custom-input" placeholder="Enter your email" required>
+            <button type="submit" class="btn-primary" id="reset-btn">Send Reset Link</button>
+        </form>
+    </div>
+</div>
+
+    <!-- MAIN APP VIEW (Hidden until Login) -->
+    <div id="app-view" style="display:none; height:100%; flex-direction:column;">
+          <header class="app-header">
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-tertiary);">Welcome back</div>
+                <div class="user-name" onclick="UI.renderPage('settings')" style="display:flex; align-items:center; gap:8px;">
+    <span id="display-name">Loading...</span> 
+    <i class="fas fa-cog" style="font-size:0.9rem; color:var(--text-tertiary);"></i>
+</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <!-- NEW: Month Filter Dropdown -->
+                <select id="month-filter" class="month-selector" onchange="UI.filterDataByMonth(this.value)" style="min-width: 120px;"></select>
+                
+                <div class="lang-btn" onclick="UI.toggleLanguage()">
+                    <i class="fas fa-globe"></i> <span id="lang-display">বাংলা</span>
+                </div>
+                <div class="logout-btn" onclick="Auth.logout()"><i class="fas fa-sign-out-alt"></i></div>
+            </div>
+        </header>
+
+        <div class="scroll-container" id="main-content">
+            <!-- Dynamic Content -->
+        </div>
+
+<div class="nav-dock">
+            <div class="nav-item active" onclick="UI.renderPage('dashboard')"><i class="fas fa-th-large"></i></div>
+            <div class="nav-item" onclick="UI.renderPage('analytics')"><i class="fas fa-chart-pie"></i></div>
+            <div class="fab" id="main-fab" onclick="UI.openTxModal()"><i class="fas fa-plus"></i></div>
+            <div class="nav-item" onclick="UI.renderPage('transactions')"><i class="fas fa-exchange-alt"></i></div>
+            <div class="nav-item" onclick="UI.renderPage('loans')"><i class="fas fa-hand-holding-usd"></i></div>
+            
+        </div>
+
+   <!-- TRANSACTION MODAL -->
+    <div id="tx-modal" class="modal-overlay">
+        <div class="bottom-sheet">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+                <h3 style="display: none;" data-i18n="addTx">New Entry</h3>
+                <i style="display: none;" class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+            </div>
+            <form id="tx-form">
+                <!-- This hidden input will hold the ID during an edit -->
+                <input type="hidden" id="tx-id">
+                
+                <div class="segment-control">
+                    <div class="segment-tab active" id="tab-exp" onclick="UI.setTxType('expense')" data-i18n="expense">Expense</div>
+                    <div class="segment-tab" id="tab-inc" onclick="UI.setTxType('income')" data-i18n="income">Income</div>
+                    <div class="segment-tab" id="tab-trf" onclick="UI.setTxType('transfer')" data-i18n="transfer">Transfer</div>
+                </div>
+                <div style="text-align:center; margin-bottom:1.5rem;">
+                    <span style="font-size:1.5rem; color:var(--text-tertiary);">৳</span>
+                    <input type="number" id="tx-amount" style="border:none; font-size:2.5rem; font-weight:700; width:200px; text-align:center; outline:none; background:transparent; color:var(--text-primary);" placeholder="0" required>
+                </div>
+                <div style="display:grid; grid-template-columns: auto 1fr; gap:0.6rem; margin-bottom:1.5rem; align-items:center;">
+                    <div style="background:var(--bg-input); padding: 5px 8px; border-radius: var(--r-sm); border: 1px solid var(--border-hover);">
+                        <input type="date" id="tx-date" style="border:none; outline:none; background:transparent; color:var(--text-secondary); font-family:inherit; font-weight:600; width:110px;" required>
+                    </div>
+                    <div>
+                        <input type="text" id="tx-note" class="custom-input" style="margin-bottom:0; padding:12px; background:var(--bg-input);" placeholder="Write a short note...">
+                    </div>
+                </div>
+                
+                <label id="tx-account-label" style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">Account</label>
+                <div class="chip-container" id="tx-account-chips"></div>
+                <input type="hidden" id="tx-account">
+                <div id="tx-acc-balance" style="font-size: 1.1rem; font-weight: 600; color: #ff0000; text-align: center; margin: -5px 0 10px 0; height: 1rem;"></div>
+                
+                <div id="tx-to-account-container" class="fluid-section hidden">
+                    <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">To Account</label>
+                    <div class="chip-container" id="tx-to-account-chips"></div>
+                    <input type="hidden" id="tx-to-account">
+                </div>
+
+                <div id="tx-category-container" class="fluid-section">
+                    <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;" data-i18n="category">Category</label>
+                    <div class="chip-container" id="category-chips"></div>
+                    <input type="hidden" id="tx-category">
+                </div>
+                
+                <div id="bulk-list-container" class="fluid-section hidden" style="margin: 1rem 0; padding: 1rem; background: var(--bg-input); border-radius: var(--r-md); border: 1px dashed var(--border-hover);">
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.8rem; display:flex; justify-content:space-between;">
+                        <span>Pending Items</span>
+                        <span id="bulk-count" style="color:var(--primary);">0</span>
+                    </div>
+                    <div id="bulk-items" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
+                <div class="modal-actions-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem; margin-top:1rem;">
+                    <button type="button" class="btn-secondary" id="add-multi-btn" onclick="UI.addToBulk()" style="background:var(--bg-input); border:1px solid var(--border-hover); padding:14px; border-radius:var(--r-sm); font-weight:700; color:var(--text-secondary); cursor:pointer;">
+                        <i class="fas fa-plus-circle" style="margin-right:6px;"></i><span data-i18n="add_another">Add Another</span>
+                    </button>
+                    <button type="submit" class="btn-primary" id="save-btn" data-i18n="save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+  <!-- CHANGE NAME MODAL -->
+<div id="name-modal" class="modal-overlay">
+    <div class="bottom-sheet">
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+            <h3 data-i18n="edit_name_title">Edit Family Name</h3>
+            <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+        </div>
+        <form onsubmit="UI.saveDisplayName(event)">
+            <input type="text" id="new-display-name" class="custom-input" placeholder="Enter new name" required>
+            <button type="submit" class="btn-primary" data-i18n="update_btn">Update</button>
+        </form>
+    </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div id="pass-modal" class="modal-overlay">
+    <div class="bottom-sheet">
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+            <h3 data-i18n="change_pass_title">Change Password</h3>
+            <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
+            Note: If you haven't logged in recently, you may need to Logout and Login again to perform this action.
+        </p>
+        <form onsubmit="UI.savePassword(event)">
+            <input type="password" id="new-password" class="custom-input" placeholder="New Password (min 6 chars)" minlength="6" required>
+            <button type="submit" class="btn-primary" id="btn-pass-save" data-i18n="update_btn">Update</button>
+        </form>
+    </div>
+</div>
+
+
+    <!-- MANAGE MODAL -->
+    <div id="manage-modal" class="modal-overlay">
+        <div class="bottom-sheet">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3 id="manage-title">Manage</h3>
+                <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+            </div>
+            
+            <!-- Section for adding a new item -->
+            <div id="manage-add-section" style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+                <input type="text" id="manage-name" class="custom-input" placeholder="New Item Name" style="margin:0;">
+                <input type="hidden" id="manage-edit-id"> <!-- To store ID when editing -->
+                <button onclick="UI.saveManagementItem()" class="btn-primary" style="width: auto; padding: 0 20px;">Save</button>
+            </div>
+
+            <!-- Tabs for Categories -->
+            <div id="manage-type-group" class="segment-control fluid-section hidden">
+                <div class="segment-tab active" id="m-tab-exp" onclick="UI.setManageCatType('expense')">Expense</div>
+                <div class="segment-tab" id="m-tab-inc" onclick="UI.setManageCatType('income')">Income</div>
+            </div>
+
+            <!-- List of existing items -->
+            <div id="manage-item-list" style="max-height: 40vh; overflow-y: auto;">
+                <!-- Items will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+   <!-- NEW: ADD LOAN MODAL -->
+  <!-- NEW: ADD LOAN MODAL -->
+    <div id="loan-modal" class="modal-overlay">
+        <div class="bottom-sheet">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+                <h3 style="display: none;" id="loan-modal-title" data-i18n="add_loan">Add New Loan</h3>
+                <i style="display: none;" class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+            </div>
+            <form id="loan-form">
+                <div class="segment-control">
+                    <div class="segment-tab active" id="loan-tab-taken" onclick="UI.setLoanType('taken')" data-i18n="loan_taken">Loan Taken</div>
+                    <div class="segment-tab" id="loan-tab-given" onclick="UI.setLoanType('given')" data-i18n="loan_given">Loan Given</div>
+                </div>
+                <input type="text" id="loan-person" class="custom-input" placeholder="Person's Name" required>
+                <input type="number" id="loan-amount" class="custom-input" placeholder="Amount" required>
+                <div style="margin-bottom:1rem;">
+                    <input type="date" id="loan-date" class="custom-input" required>
+                </div>
+                <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">Select Account</label>
+                <div class="chip-container" id="loan-account-chips"></div>
+                <input type="hidden" id="loan-account">
+                
+                <!-- ADD THIS DIV FOR BALANCE DISPLAY -->
+                <div id="loan-acc-balance" style="font-size: 0.85rem; color: var(--text-tertiary); text-align: right; margin: -10px 0 10px 0; height: 1rem;"></div>
+
+                <button type="submit" class="btn-primary" data-i18n="save">Save Loan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- NEW: SETTLE LOAN MODAL -->
+    <div id="settle-modal" class="modal-overlay">
+        <div class="bottom-sheet">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+                <h3 data-i18n="settle_loan">Settle Loan</h3>
+                <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+            </div>
+            <form id="settle-form">
+                <input type="hidden" id="settle-loan-id">
+                <input type="hidden" id="settle-loan-type">
+                <input type="hidden" id="settle-loan-person">
+                <div id="settle-info" style="margin-bottom: 1rem; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;"></div>
+                <input type="number" id="settle-amount" class="custom-input" placeholder="Settlement Amount" required>
+                
+                <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">Select Account</label>
+                <div class="chip-container" id="settle-account-chips"></div>
+                <input type="hidden" id="settle-account">
+
+                <div id="settle-acc-balance" style="font-size: 0.85rem; color: var(--text-tertiary); text-align: right; margin: -10px 0 10px 0; height: 1rem;"></div>
+
+
+                <button type="submit" class="btn-primary" data-i18n="add_payment">Add Payment</button>
+            </form>
+        </div>
+    </div>
+    <!-- QUICK ADD MODAL (Short Modal over existing modals) -->
+    <div id="quick-add-modal" class="modal-overlay" style="z-index: 1000;">
+        <div class="bottom-sheet" style="padding-bottom: 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 id="quick-add-title">Add New</h3>
+                <i class="fas fa-times" onclick="UI.closeQuickAddModal()" style="font-size:1.2rem; cursor:pointer;"></i>
+            </div>
+            
+            <form onsubmit="UI.saveQuickAdd(event)" style="display:flex; flex-direction:column; gap:10px;">
+                <input type="hidden" id="quick-add-type">
+                <input type="text" id="quick-add-name" class="custom-input" placeholder="Name" required style="margin-bottom:0;">
+                <button type="submit" class="btn-primary" id="btn-quick-save">Save</button>
+            </form>
+        </div>
+    </div>
+
+   <script src="sw.js"></script>
+   <script type="module" src="app.js"></script>
+
+</body>
+</html>
