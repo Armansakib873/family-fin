@@ -1,5 +1,4 @@
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
        import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
           import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
@@ -20,8 +19,9 @@
         const db = getFirestore(app);
         const functions = getFunctions(app);
 
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         /* --- GLOBAL STATE --- */
-        const State = { user: null, txs: [], loans: [], accounts: [], categories: { income: [], expense: [] }, selectedMonth: 'all' };
+        const State = { user: null, txs: [], loans: [], accounts: [], categories: { income: [], expense: [] }, selectedMonth: new Date().toISOString().slice(0, 7) };
 
           const Lang = {
             current: localStorage.getItem('bhalo_lang') || 'bn',
@@ -34,10 +34,19 @@
                         add_cat: "Manage Categories", data_mgmt: "Data Management", export: "Export Data", 
                         income_log: "Income Logs", expense_log: "Expense Logs", no_data: "No data available", 
                         viewAll: "View All", all_data: "All Data", reset_data: "Reset All Data",
-                        loan_summary: "Receivables / Payables", owed_to_you: "Owed To You", you_owe: "You Owe",
-                        loan_management: "Loan Management", add_loan: "Add New Loan", loan_taken: "Loan Taken",
-                        loan_given: "Loan Given", make_payment: "Make Payment", settle_loan: "Settle Loan",
-                        add_payment: "Add Payment", remaining_balance: "Remaining",
+                        guide: "Guide", guide_title: "Quick Guide", guide_toggle: "View guide",
+                        guide_intro: "Here is a quick overview of the main entry options in this app.",
+                        guide_expense: "Expense", guide_income: "Income", guide_transfer: "Transfer",
+                        guide_account: "Account", guide_category: "Category", guide_note: "Note",
+                        guide_amount: "Amount", guide_date: "Date",
+                        guide_step1: "1. Tap the + button.", guide_step2: "2. Choose expense, income or transfer.",
+                        guide_step3: "3. Add account, category, date and note.",
+                        guide_step4: "4. Enter the amount and save.",
+                        guide_summary: "Expense = spending, Income = earning, Transfer = moving money between accounts.",
+                        guide_bal: "Check your available balance when an account is selected.",
+                        guide_loans: "Use the loans tab to track borrowed or lent money.",
+                        guide_manage: "Manage accounts and categories from settings.",
+                        guide_hint: "Tip: add a short note so you remember the purpose later.",
                           profile_settings: "Profile Settings",
                 change_name: "Change Family Name",
                 change_pass: "Change Password",
@@ -47,7 +56,19 @@
                 expense: "Expense",
                 income: "Income",
                 transfer: "Transfer",
-                add_another: "Add Another"
+                add_another: "Add Another",
+                accounts: "Accounts", loans: "Loans", loans_sep: "Separate from wallet", full_amount: "Full amount",
+                loan_hint: "Loans are tracked separately and never change your wallet balance.",
+                loan_hint_page: "Money you lent or borrowed. Not part of your wallet balance.",
+                email: "Email Address", password: "Password", person_ph: "Person's name", amount: "Amount", note_opt: "Note (optional)",
+                paid: "Paid", delete: "Delete", loan_saved: "Loan saved", pay_saved: "Payment added", loan_deleted: "Loan deleted",
+                confirm_del_loan: "Delete this loan and its payment history?", too_much: "Amount is more than the remaining balance.",
+                bad_amount: "Please enter a valid amount.", name_req: "Please enter the person's name.", no_loans: "No loans here yet",
+                receive: "Receive Payment", pay_now: "Pay Now", settled: "Settled", active: "Active", overdue: "Overdue", due: "Due",
+                install: "Install App", install_help: "To install: open your browser menu and choose 'Add to Home screen' (iPhone: Share → Add to Home Screen).",
+                fix_app: "Fix / Refresh App", fix_app_sub: "Use if the app looks old or install says 'already installed'", net: "Net",
+                login: "Login", signup: "Sign Up", create_acc: "Create Account", new_here: "New here? ", have_acc: "Have an account? ", forgot: "Forgot Password?",
+                logout: "Log Out", tagline: "Secure Family Expense Tracker"
         
                     },
                     bn: { 
@@ -57,6 +78,19 @@
                         add_cat: "ক্যাটাগরি ম্যানেজ", data_mgmt: "ডাটা ম্যানেজমেন্ট", export: "ডাটা এক্সপোর্ট", 
                         income_log: "আয়ের হিসাব", expense_log: "ব্যয়ের হিসাব", no_data: "কোন তথ্য নেই", 
                         viewAll: "সব দেখুন", all_data: "সব ডাটা", reset_data: "সব ডাটা রিসেট",
+                        guide: "গাইড", guide_title: "দ্রুত গাইড", guide_toggle: "গাইড দেখুন",
+                        guide_intro: "এই অ্যাপের প্রধান এন্ট্রি অপশনগুলো কীভাবে ব্যবহার করবেন তা নিচে দেখানো হয়েছে।",
+                        guide_expense: "ব্যয়", guide_income: "আয়", guide_transfer: "স্থানান্তর",
+                        guide_account: "অ্যাকাউন্ট", guide_category: "ক্যাটাগরি", guide_note: "নোট",
+                        guide_amount: "টাকার পরিমাণ", guide_date: "তারিখ",
+                        guide_step1: "১. '+' বাটনে ক্লিক করুন।", guide_step2: "২. ব্যয়, আয় বা স্থানান্তর টাইপ বেছে নিন।",
+                        guide_step3: "৩. অ্যাকাউন্ট, ক্যাটাগরি, তারিখ, নোট লিখুন।",
+                        guide_step4: "৪. টাকা লিখে সেভ করুন।",
+                        guide_summary: "ব্যয় = খরচ, আয় = আয়, স্থানান্তর = একাউন্ট থেকে আরেক অ্যাকাউন্টে টাকা পাঠানো।",
+                        guide_bal: "ব্যালেন্স দেখুন: অ্যাকাউন্ট নির্বাচন করলে বর্তমান টাকার অবস্থা দেখা যাবে।",
+                        guide_loans: "দেনা-পাওনা: ঋণ ট্যাব থেকে ধার নেওয়া/দেওয়া যোগ করুন।",
+                        guide_manage: "অ্যাকাউন্ট বা ক্যাটাগরি যোগ/পরিবর্তন করতে সেটিংস এ যান।",
+                        guide_hint: "টিপস: ছোট নোট লিখুন যাতে পরে বুঝতে সহজ হয়।",
                         
                         // UPDATED TERMS HERE
                         loan_summary: "দেনা - পাওনা", 
@@ -73,10 +107,22 @@
                 update_btn: "আপডেট করুন",
                 edit_name_title: "নাম পরিবর্তন",
                 change_pass_title: "পাসওয়ার্ড পরিবর্তন",
-                expense: "ব্যয়",
+                expense: "ব্যয়",
                 income: "আয়",
                 transfer: "স্থানান্তর",
-                add_another: "আরও যোগ করুন"
+                add_another: "আরও যোগ করুন",
+                accounts: "অ্যাকাউন্ট", loans: "দেনা-পাওনা", loans_sep: "ওয়ালেট থেকে আলাদা", full_amount: "পুরো টাকা",
+                loan_hint: "দেনা-পাওনা আলাদাভাবে হিসাব হয়, আপনার ওয়ালেটের ব্যালেন্স বদলায় না।",
+                loan_hint_page: "যে টাকা ধার দিয়েছেন বা নিয়েছেন। এটি ওয়ালেট ব্যালেন্সের অংশ নয়।",
+                email: "ইমেইল", password: "পাসওয়ার্ড", person_ph: "ব্যক্তির নাম", amount: "টাকার পরিমাণ", note_opt: "নোট (ঐচ্ছিক)",
+                paid: "পরিশোধিত", delete: "মুছুন", loan_saved: "সংরক্ষিত হয়েছে", pay_saved: "পেমেন্ট যোগ হয়েছে", loan_deleted: "মুছে ফেলা হয়েছে",
+                confirm_del_loan: "এই ঋণ ও এর পেমেন্টের তথ্য মুছে ফেলবেন?", too_much: "বকেয়ার চেয়ে বেশি টাকা দেওয়া যাবে না।",
+                bad_amount: "সঠিক পরিমাণ লিখুন।", name_req: "ব্যক্তির নাম লিখুন।", no_loans: "এখনো কোনো হিসাব নেই",
+                receive: "টাকা গ্রহণ করুন", pay_now: "পরিশোধ করুন", settled: "পরিশোধিত", active: "চলমান", overdue: "মেয়াদোত্তীর্ণ", due: "শেষ তারিখ",
+                install: "অ্যাপ ইনস্টল করুন", install_help: "ইনস্টল করতে ব্রাউজার মেনু থেকে 'Add to Home screen' বেছে নিন (আইফোনে: Share → Add to Home Screen)।",
+                fix_app: "অ্যাপ ঠিক / রিফ্রেশ করুন", fix_app_sub: "অ্যাপ পুরনো দেখালে বা 'already installed' বললে ব্যবহার করুন", net: "নিট",
+                login: "লগইন", signup: "সাইন আপ", create_acc: "অ্যাকাউন্ট খুলুন", new_here: "নতুন? ", have_acc: "অ্যাকাউন্ট আছে? ", forgot: "পাসওয়ার্ড ভুলে গেছেন?",
+                logout: "লগ আউট", tagline: "নিরাপদ পারিবারিক হিসাব"
                     }
                 };
                 return dict[this.current][key] || key;
@@ -164,6 +210,15 @@ window.Auth = {
         };
     },
 
+    syncText() {
+        const r = this.isRegister;
+        document.getElementById('auth-title-text').textContent = r ? Lang.t('create_acc') : 'Family-Fin';
+        document.getElementById('auth-subtitle').textContent = Lang.t('tagline');
+        document.getElementById('auth-btn').textContent = r ? Lang.t('signup') : Lang.t('login');
+        document.getElementById('auth-toggle-text').textContent = r ? Lang.t('have_acc') : Lang.t('new_here');
+        document.getElementById('auth-toggle-btn').textContent = r ? Lang.t('login') : Lang.t('create_acc');
+        document.querySelector('#forgot-pass-link span').textContent = Lang.t('forgot');
+    },
     toggle() {
         this.isRegister = !this.isRegister;
         
@@ -171,15 +226,7 @@ window.Auth = {
         document.getElementById('auth-name').style.display = this.isRegister ? 'block' : 'none';
         document.getElementById('forgot-pass-link').style.display = this.isRegister ? 'none' : 'block';
         
-        // Update Text
-        document.getElementById('auth-title-text').textContent = this.isRegister ? 'Create Account' : 'Family-Fin Cloud';
-        document.getElementById('auth-subtitle').textContent = this.isRegister ? 'Start tracking your family expenses' : 'Secure Family Expense Tracker';
-        document.getElementById('auth-btn').textContent = this.isRegister ? 'Sign Up' : 'Login';
-        
-        // Update Bottom Link
-        document.getElementById('auth-toggle-text').textContent = this.isRegister ? 'Have an account? ' : 'New here? ';
-        document.getElementById('auth-toggle-btn').textContent = this.isRegister ? 'Login' : 'Create Account';
-        
+        this.syncText();
         // Clear errors
         document.getElementById('auth-error').innerText = "";
     },
@@ -207,7 +254,7 @@ window.Auth = {
                         let shouldRender = true;
                         switch (coll) {
                             case 'transactions':
-                                State.txs = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => new Date(b.date) - new Date(a.date));
+                                State.txs = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(t => !t.isLoan).sort((a, b) => new Date(b.date) - new Date(a.date));
                                 UI.populateMonthFilter();
                                 break;
                             case 'accounts':
@@ -307,8 +354,7 @@ window.Auth = {
                     const settlementRef = doc(collection(db, "settlements"));
                     transaction.set(settlementRef, { ...settlementData, loanId: loanId, uid: State.user.uid, timestamp: serverTimestamp() });
                     
-                    const txRef = doc(collection(db, "transactions"));
-                    transaction.set(txRef, { ...txData, uid: State.user.uid, timestamp: serverTimestamp(), isLoan: true, loanId: loanId, settlementId: settlementRef.id });
+                    // no wallet transaction: loans are separate from the wallet
                 });
             },
     
@@ -525,7 +571,7 @@ openResetModal() {
             Lang.current = Lang.current === 'bn' ? 'en' : 'bn';
             localStorage.setItem('bhalo_lang', Lang.current);
             this.updateLangDisplay();
-            this.renderPage(this.currentPage); // Re-render to apply language to dynamic content
+            this.renderPage(this.currentPage); Auth.syncText();
         },
             
               updateLangDisplay() {
@@ -535,10 +581,15 @@ openResetModal() {
                 document.body.classList.remove('lang-bn');
             }
             document.getElementById('lang-display').textContent = Lang.current === 'bn' ? 'বাংলা' : 'EN';
+            document.querySelectorAll('[data-ph]').forEach(el => el.placeholder = Lang.t(el.dataset.ph));
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 el.textContent = Lang.t(key);
             });
+            const guideLabel = document.getElementById('tx-guide-label');
+            const guideBtnText = document.getElementById('tx-guide-btn-text');
+            if (guideLabel) guideLabel.textContent = Lang.t('guide');
+            if (guideBtnText) guideBtnText.textContent = Lang.t('guide_toggle');
         },
 
                 formatMoney(amt) { return new Intl.NumberFormat(Lang.current==='bn'?'bn-BD':'en-US').format(amt); },
@@ -564,10 +615,10 @@ openResetModal() {
                 const filterEl = document.getElementById('month-filter');
                 if (!filterEl) return;
 
-                const months = [...new Set(State.txs.map(tx => tx.date.substring(0, 7)))];
+                const months = [...new Set([new Date().toISOString().slice(0, 7), ...State.txs.map(tx => tx.date.substring(0, 7))])];
                 let options = `<option value="all">${Lang.t('all_data')}</option>`;
                 months.sort().reverse().forEach(month => {
-                    options += `<option value="${month}" ${State.selectedMonth === month ? 'selected' : ''}>${moment(month).format('MMMM YYYY')}</option>`;
+                    options += `<option value="${month}" ${State.selectedMonth === month ? 'selected' : ''}>${new Date(month + '-01').toLocaleDateString(Lang.current === 'bn' ? 'bn-BD' : 'en-US', { month: 'long', year: 'numeric' })}</option>`;
                 });
                 filterEl.innerHTML = options;
             },
@@ -624,6 +675,8 @@ openResetModal() {
                 const totalBalance = State.txs.reduce((sum, t) => t.type === 'income' ? sum + t.amount : t.type === 'expense' ? sum - t.amount : sum, 0);
                 const periodIncome = filteredTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
                 const periodExpense = filteredTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                const totalReceivable = State.loans.filter(l => l.type === 'given' && l.status === 'active').reduce((s, l) => s + l.currentBalance, 0);
+                const totalPayable = State.loans.filter(l => l.type === 'taken' && l.status === 'active').reduce((s, l) => s + l.currentBalance, 0);
 
                 // Initial render of the main dashboard content
                 container.innerHTML = `
@@ -640,8 +693,16 @@ openResetModal() {
                                 <div class="pill-val exp-text">৳${this.formatMoney(periodExpense)}</div>
                             </div>
                         </div>
+                        <div class="loan-strip" onclick="UI.renderPage('loans')">
+                            <div class="ls-head"><span>${Lang.t('loans')}</span><i>${Lang.t('loans_sep')} ›</i></div>
+                            <div class="ls-row">
+                                <div><span class="dot g"></span>${Lang.t('owed_to_you')}<b>৳${this.formatMoney(totalReceivable)}</b></div>
+                                <div><span class="dot a"></span>${Lang.t('you_owe')}<b>৳${this.formatMoney(totalPayable)}</b></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="section-title">Accounts</div>
+                    <div id="install-banner" class="install-banner"><span>📲 ${Lang.t('install')}</span><button onclick="UI.installApp()">${Lang.t('install')}</button></div>
+                    <div class="section-title">${Lang.t('accounts')}</div>
                     <div class="account-slider" id="account-slider-container">
                         ${this.renderAccountSkeletons()}
                     </div>
@@ -650,28 +711,7 @@ openResetModal() {
                     <div style="height:80px"></div>
                 `;
                 
-                // Now, render the loan card separately
-                const totalReceivable = State.loans.filter(l => l.type === 'given' && l.status === 'active').reduce((sum, l) => sum + l.currentBalance, 0);
-                const totalPayable = State.loans.filter(l => l.type === 'taken' && l.status === 'active').reduce((sum, l) => sum + l.currentBalance, 0);
-
-                const loanCardHTML = `
-                    <div class="section-title" data-i18n="loan_summary">Receivables / Payables</div>
-                    <div class="loan-summary-card">
-                        <div class="loan-pill">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);"></div><span class="loan-pill-title" data-i18n="owed_to_you" style="margin:0;">Owed To You</span></div>
-                            <div class="loan-pill-amount inc-text">৳${this.formatMoney(totalReceivable)}</div>
-                        </div>
-                        <div class="loan-pill">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--red);"></div><span class="loan-pill-title" data-i18n="you_owe" style="margin:0;">You Owe</span></div>
-                            <div class="loan-pill-amount exp-text">৳${this.formatMoney(totalPayable)}</div>
-                        </div>
-                    </div>`;
-
-                const balanceCard = container.querySelector('.balance-card');
-                if (balanceCard) {
-                    balanceCard.insertAdjacentHTML('afterend', loanCardHTML);
-                }
-                
+                if (deferredInstall) { const b = document.getElementById('install-banner'); if (b) b.style.display = 'flex'; }
                 this.populateAccountCards();
 
                 // FIX: Call this function at the end to apply all translations
@@ -779,12 +819,13 @@ updateLoanModalAccountBalance() {
                 <div class="section-title">
                     <span data-i18n="loan_management">Loan Management</span>
                 </div>
+                <div class="loan-hint">${Lang.t('loan_hint_page')}</div>
                 <div class="segment-control">
-                    <div class="segment-tab ${type==='taken'?'active':''}" onclick="UI.renderLoansPage(document.getElementById('main-content'), 'taken')" data-i18n="you_owe">Payables (You Owe)</div>
+                    <div class="segment-tab ${type==='taken'?'active':''}" onclick="UI.renderLoansPage(document.getElementById('main-content'), 'taken')" data-i18n="you_owe"></div>
                     <div class="segment-tab ${type==='given'?'active':''}" onclick="UI.renderLoansPage(document.getElementById('main-content'), 'given')" data-i18n="owed_to_you">Receivables (Owed to You)</div>
                 </div>
                 <div id="loan-list">
-                    ${filteredLoans.map(l => this.renderLoanCard(l)).join('') || `<div style="text-align:center;color:var(--text-muted);padding:2rem 0;font-size:0.9rem;" data-i18n="no_data">No loans found.</div>`}
+                    ${filteredLoans.map(l => this.renderLoanCard(l)).join('') || `<div style="text-align:center;color:var(--text-muted);padding:2rem 0;font-size:0.9rem;">${Lang.t('no_loans')}</div>`}
                 </div>
                 <div style="height:80px"></div>
             `;
@@ -792,39 +833,33 @@ updateLoanModalAccountBalance() {
         },
             
           renderLoanCard(loan) {
-    const progress = ((loan.initialAmount - loan.currentBalance) / loan.initialAmount) * 100;
-    const loanObjectString = JSON.stringify(loan).replace(/"/g, '&quot;');
-    
-    // FIX: Format the date correctly (prevent NAN)
-    let displayDate = moment(loan.loanDate).format('DD/MM/YYYY');
-    
-    // Convert date numbers to Bengali if language is BN
-    if (Lang.current === 'bn') {
-        const map = { '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯' };
-        displayDate = displayDate.replace(/\d/g, m => map[m]);
-    }
-
+    const paid = loan.initialAmount - loan.currentBalance;
+    const progress = Math.min(100, (paid / loan.initialAmount) * 100);
+    const loc = Lang.current === 'bn' ? 'bn-BD' : 'en-GB';
+    const fmt = d => new Date(d).toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+    const today = new Date().toISOString().slice(0, 10);
+    const late = loan.status === 'active' && loan.dueDate && loan.dueDate < today;
+    const color = loan.type === 'taken' ? 'var(--amber)' : 'var(--green)';
     return `
     <div class="loan-card ${loan.status}">
         <div class="loan-card-header">
-            <span class="loan-person">${loan.personName}</span>
-            <span class="loan-date">${displayDate}</span>
+            <span class="loan-person">${esc(loan.personName)}</span>
+            <span class="loan-date">${fmt(loan.loanDate)}</span>
         </div>
-        <div class="loan-balance-row">
-            <span data-i18n="remaining_balance">Remaining</span>
-            <span class="loan-balance">৳${this.formatMoney(loan.currentBalance)} / ৳${this.formatMoney(loan.initialAmount)}</span>
+        ${loan.note ? `<div style="font-size:.8rem;color:var(--text-secondary);margin-top:2px">${esc(loan.note)}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:12px 0 8px">
+            <div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600">${Lang.t('remaining_balance')}</div>
+                 <div style="font-size:1.4rem;font-weight:800;color:${color}">৳${this.formatMoney(loan.currentBalance)}</div></div>
+            <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">${Lang.t('paid')} ৳${this.formatMoney(paid)} / ৳${this.formatMoney(loan.initialAmount)}
+                ${late ? `<div style="color:var(--red);font-weight:700">${Lang.t('overdue')} · ${fmt(loan.dueDate)}</div>` : (loan.dueDate && loan.status === 'active' ? `<div>${Lang.t('due')}: ${fmt(loan.dueDate)}</div>` : '')}</div>
         </div>
-        <div class="progress-bar-bg">
-            <div class="progress-bar-fg" style="width:${progress}%; background: ${loan.type === 'taken' ? 'var(--accent-red)' : 'var(--accent-green)'};"></div>
+        <div class="progress-bar-bg"><div class="progress-bar-fg" style="width:${progress}%;background:${color}"></div></div>
+        <div class="loan-foot">
+            ${loan.status === 'active' ? `<button class="btn-settle" onclick="UI.settleById('${loan.id}')">${loan.type === 'taken' ? Lang.t('pay_now') : Lang.t('receive')}</button>` : `<div style="flex:1;color:var(--green);font-weight:700;font-size:.85rem;align-self:center">✓ ${Lang.t('settled')}</div>`}
+            <button class="btn-del" onclick="UI.deleteLoan('${loan.id}')">${Lang.t('delete')}</button>
         </div>
-        ${loan.status === 'active' ? `
-        <div class="loan-card-footer">
-            <button class="btn-settle" onclick='UI.openSettleModal(${loanObjectString})' data-i18n="make_payment">Make Payment</button>
-        </div>` : ''}
     </div>`;
 },
-
-
 
         // Add this inside window.UI object, preferably near updateLoanModalAccountBalance
 updateSettleModalAccountBalance() {
@@ -846,8 +881,10 @@ updateSettleModalAccountBalance() {
     
     if (loanType === 'taken' && amount > balance) {
         balanceEl.style.color = 'var(--accent-red)';
+        balanceEl.textContent = `Insufficient Balance! (Available: ৳${UI.formatMoney(balance)})`;
     } else {
         balanceEl.style.color = 'var(--text-tertiary)';
+        balanceEl.textContent = `Next Balance: ৳${UI.formatMoney(nextBal)}`;
     }
 },
 
@@ -857,12 +894,10 @@ updateSettleModalAccountBalance() {
             this.openModal('loan-modal');
             document.getElementById('loan-form').reset();
             document.getElementById('loan-date').valueAsDate = new Date();
+            ['loan-due', 'loan-note'].forEach(i => document.getElementById(i).value = '');
             
             // Render chips
-            this.renderAccountSelector('loan-account-chips', 'loan-account', null, 'updateLoanModalAccountBalance');
-            
-            this.setLoanType('taken'); // Set default type
-            this.updateLoanModalAccountBalance(); 
+            this.setLoanType('taken');
         },
 
           // In window.UI object
@@ -877,106 +912,51 @@ updateSettleModalAccountBalance() {
 
                async saveLoan() {
                 const type = this.currentLoanType;
-                const personName = document.getElementById('loan-person').value;
+                const personName = document.getElementById('loan-person').value.trim();
                 const amount = parseFloat(document.getElementById('loan-amount').value);
                 const loanDate = document.getElementById('loan-date').value;
-                const account = document.getElementById('loan-account').value;
-
-                if (!account) {
-                    this.showNotification('Please select an account.');
-                    return;
-                }
-
-                if (type === 'given') {
-                    const accountBalance = this.getAccountBalance(account);
-                    if (amount > accountBalance) {
-                        // This call will now work correctly
-                        this.showNotification(`Cannot give loan. Insufficient balance in ${account}.`);
-                        return;
-                    }
-                }
-
-                const loanData = { type, personName, initialAmount: amount, currentBalance: amount, loanDate, status: 'active' };
-                const txData = {
-                    amount, account, date: loanDate,
-                    type: type === 'taken' ? 'income' : 'expense',
-                    category: 'Loan',
-                    note: type === 'taken' ? `Loan from ${personName}` : `Loan to ${personName}`
-                };
-
-                await Data.addLoanAndTransaction(loanData, txData);
-                // This call will now work correctly
-                this.showNotification('Loan saved successfully!', 'success');
+                if (!personName) return this.showNotification(Lang.t('name_req'));
+                if (!amount || amount <= 0) return this.showNotification(Lang.t('bad_amount'));
+                const loanData = { type, personName, initialAmount: amount, currentBalance: amount, loanDate, status: 'active',
+                    dueDate: document.getElementById('loan-due').value || '', note: document.getElementById('loan-note').value.trim() };
+                // Loans live in their own collection: no wallet transaction is created
+                await addDoc(collection(db, "loans"), { ...loanData, uid: State.user.uid, timestamp: serverTimestamp() });
+                this.showNotification(Lang.t('loan_saved'), 'success');
                 this.closeModals();
             },
 
-          openSettleModal(loan) {
-    this.openModal('settle-modal');
-    document.getElementById('settle-form').reset();
-    
-    document.getElementById('settle-loan-id').value = loan.id;
-    document.getElementById('settle-loan-type').value = loan.type;
-    document.getElementById('settle-loan-person').value = loan.personName;
-    
-    document.getElementById('settle-info').innerHTML = `
-        <div>Paying to/from: <strong>${loan.personName}</strong></div>
-        <div style="font-size:0.9rem; color:var(--text-secondary);">Remaining Balance: ৳${this.formatMoney(loan.currentBalance)}</div>
-    `;
-    document.getElementById('settle-amount').max = loan.currentBalance;
-    
-    // Render chips
-    this.renderAccountSelector('settle-account-chips', 'settle-account', null, 'updateSettleModalAccountBalance');
+            openSettleModal(loan) {
+                this.openModal('settle-modal');
+                document.getElementById('settle-form').reset();
+                document.getElementById('settle-loan-id').value = loan.id;
+                document.getElementById('settle-loan-type').value = loan.type;
+                document.getElementById('settle-loan-person').value = loan.personName;
+                this.settleRemaining = loan.currentBalance;
+                document.getElementById('settle-info').innerHTML = `<div style="font-weight:700">${esc(loan.personName)}</div>
+                    <div style="font-size:.9rem;color:var(--text-secondary)">${Lang.t('remaining_balance')}: ৳${this.formatMoney(loan.currentBalance)}</div>`;
+            },
+            settleById(id) { const l = State.loans.find(x => x.id === id); if (l) this.openSettleModal(l); },
+            fillFullSettle() { document.getElementById('settle-amount').value = this.settleRemaining || ''; },
 
-    // NEW: Trigger balance update immediately so it shows up when modal opens
-    this.updateSettleModalAccountBalance();
-},
-
-
-                 async saveSettlement() {
+            async saveSettlement() {
                 const loanId = document.getElementById('settle-loan-id').value;
-                const loanType = document.getElementById('settle-loan-type').value;
-                const personName = document.getElementById('settle-loan-person').value;
                 const amount = parseFloat(document.getElementById('settle-amount').value);
-                const account = document.getElementById('settle-account').value;
-
-                if (!loanId || !amount || amount <= 0) {
-                    this.showNotification('Please enter a valid amount.');
-                    return;
-                }
-
-                if (!account) {
-                    this.showNotification('Please select an account.');
-                    return;
-                }
-
-                if (loanType === 'taken') {
-                    const accountBalance = this.getAccountBalance(account);
-                    if (amount > accountBalance) {
-                        this.showNotification(`Cannot repay. Insufficient balance in ${account}.`);
-                        return;
-                    }
-                }
-                
-                const settlementDate = new Date().toISOString().slice(0, 10);
-                const settlementData = { amount, settlementDate };
-                
-                // FIX: The txData object is now fully defined
-                const txData = {
-                    amount, 
-                    account, 
-                    date: settlementDate,
-                    type: loanType === 'taken' ? 'expense' : 'income',
-                    category: 'Loan Settlement',
-                    note: loanType === 'taken' ? `Repayment to ${personName}` : `Repayment from ${personName}`
-                };
-
-                await Data.addSettlementAndUpdateLoan(loanId, settlementData, txData);
-                this.showNotification('Payment added!', 'success');
+                if (!loanId || !amount || amount <= 0) return this.showNotification(Lang.t('bad_amount'));
+                if (amount > this.settleRemaining) return this.showNotification(Lang.t('too_much'));
+                await Data.addSettlementAndUpdateLoan(loanId, { amount, settlementDate: new Date().toISOString().slice(0, 10) }, null);
+                this.showNotification(Lang.t('pay_saved'), 'success');
                 this.closeModals();
             },
 
-            
-
+            async deleteLoan(id) {
+                if (!confirm(Lang.t('confirm_del_loan'))) return;
+                const batch = writeBatch(db);
+                batch.delete(doc(db, "loans", id));
+                const snap = await getDocs(query(collection(db, "settlements"), where("uid", "==", State.user.uid), where("loanId", "==", id)));
+                snap.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                this.showNotification(Lang.t('loan_deleted'), 'success');
+            },
 
             renderAccountSkeletons() {
                 let skeletons = '';
@@ -1274,7 +1254,7 @@ updateSettleModalAccountBalance() {
             },
 
             renderTxRow(t) {
-                const txObjectString = JSON.stringify(t).replace(/"/g, '&quot;');
+                
                 const icon = this.getCatIcon(t.category);
                 const isTransfer = t.type === 'transfer';
                 const accountDisplay = isTransfer ? `${t.account} → ${t.toAccount}` : t.account;
@@ -1284,13 +1264,13 @@ updateSettleModalAccountBalance() {
                 return `<div class="log-item ${t.type}">
                     <div class="log-cat-icon ${t.type}"><i class="fas ${icon}"></i></div>
                     <div style="flex:1; min-width:0;">
-                        <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary); letter-spacing:-0.01em;">${t.category}</div>
-                        <div class="log-date">${accountDisplay} • ${t.date}${t.note ? ' • ' + t.note : ''}</div>
+                        <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary); letter-spacing:-0.01em;">${esc(t.category)}</div>
+                        <div class="log-date">${esc(accountDisplay)} • ${t.date}${t.note ? ' • ' + esc(t.note) : ''}</div>
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
                         <div class="log-amt ${amtClass}">${amtSymbol}৳${this.formatMoney(t.amount)}</div>
                         <div class="log-actions">
-                            <i class="fas fa-pen" onclick='UI.editTransaction(${txObjectString})'></i>
+                            <i class="fas fa-pen" onclick="UI.editById('${t.id}')"></i>
                             <i class="fas fa-trash" onclick="UI.deleteTransaction('${t.id}')"></i>
                         </div>
                     </div>
@@ -1303,6 +1283,7 @@ updateSettleModalAccountBalance() {
                     await Data.deleteMeta('transactions', id);
                 }
             },
+            editById(id) { const t = State.txs.find(x => x.id === id); if (t) this.openTxModal(t); },
             editTransaction(tx) {
                 this.openTxModal(tx); // Open modal and pass the transaction object
             },
@@ -1323,6 +1304,17 @@ updateSettleModalAccountBalance() {
             <div class="setting-item-left">
                 <div class="setting-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-lock"></i></div>
                 <div style="font-weight:600;font-size:0.92rem;">${Lang.t('change_pass')}</div>
+            </div>
+            <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem;"></i>
+        </div>
+
+        <div class="setting-item" onclick="UI.openGuide()">
+            <div class="setting-item-left">
+                <div class="setting-icon" style="background:#f3e8ff;color:#7c3aed;"><i class="fas fa-circle-question"></i></div>
+                <div>
+                    <div style="font-weight:600;font-size:0.92rem;">${Lang.t('guide')}</div>
+                    <div style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">${Lang.t('guide_toggle')}</div>
+                </div>
             </div>
             <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem;"></i>
         </div>
@@ -1355,6 +1347,9 @@ updateSettleModalAccountBalance() {
             <i class="fas fa-download" style="color:var(--text-muted);font-size:0.85rem;"></i>
         </div>
 
+        <div class="setting-item" onclick="UI.installApp()"><div class="setting-item-left"><div class="setting-icon" style="background:#d1fae5;color:#059669;"><i class="fas fa-download"></i></div><div style="font-weight:600;font-size:0.92rem;">${Lang.t('install')}</div></div></div>
+        <div class="setting-item" onclick="UI.fixApp()"><div class="setting-item-left"><div class="setting-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-sync"></i></div><div><div style="font-weight:600;font-size:0.92rem;">${Lang.t('fix_app')}</div><div style="font-size:0.72rem;color:var(--text-muted);">${Lang.t('fix_app_sub')}</div></div></div></div>
+        <div class="setting-item" onclick="Auth.logout()"><div class="setting-item-left"><div class="setting-icon" style="background:var(--red-bg);color:var(--red);"><i class="fas fa-sign-out-alt"></i></div><div style="font-weight:600;fontsize:0.92rem;">${Lang.t('logout')}</div></div></div>
         <div style="height:12px;"></div>
         <button class="btn-danger" onclick="UI.resetData()"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>${Lang.t('reset_data')}</button>
         <div style="height:80px"></div>
@@ -1363,7 +1358,7 @@ updateSettleModalAccountBalance() {
 
             // NEW: Handler for reset button
             async resetData() {
-                if (confirm('WARNING: This will delete ALL transactions, accounts, and categories. This cannot be undone. Are you sure?')) {
+                if (confirm('WARNING: This will delete ALL transactions, loans and payments (accounts and categories are kept). This cannot be undone. Are you sure?')) {
                     await Data.resetAllData();
                     alert('Data has been reset.');
                 }
@@ -1376,7 +1371,7 @@ updateSettleModalAccountBalance() {
                 if(filtered.length === 0) return alert("No data for the selected period.");
                 let csv = "Date,Type,Category,Amount,Account,Note\n";
                 filtered.forEach(t => csv += `${t.date},${t.type},${t.category},${t.amount},${t.account},"${t.note || ''}"\n`);
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `FamilyFin_${State.selectedMonth}.csv`; a.click();
             },
@@ -1471,9 +1466,9 @@ updateSettleModalAccountBalance() {
 
                 const saveBtn = document.getElementById('save-btn');
 
-                if ((UI.currentTxType === 'expense' || UI.currentTxType === 'transfer') && amount > effectiveBal) {
+                if ((UI.currentTxType === 'expense' || UI.currentTxType === 'transfer') && amount > (bal - pendingOutFromThisAcc)) {
                     balanceEl.style.color = 'var(--accent-red)';
-                    balanceEl.textContent = `Insufficient Balance! (Available: ৳${UI.formatMoney(effectiveBal)})`;
+                    balanceEl.textContent = `Insufficient balance in ${account} (including pending items).`;
                     saveBtn.disabled = true;
                 } else {
                     balanceEl.style.color = 'var(--text-tertiary)';
@@ -1919,21 +1914,84 @@ updateSettleModalAccountBalance() {
                 if (!fromPopstate && history.state && history.state.isModal) {
                     history.back();
                 }
-            }
+            },
+
+            openGuide() {
+                const content = document.getElementById('guide-content');
+                const title = document.getElementById('guide-title');
+                if (!content || !title) return;
+
+                const isBn = Lang.current === 'bn';
+                title.textContent = isBn ? Lang.t('guide_title') : 'Quick Guide';
+
+                const guide = isBn ? {
+                    intro: 'এই অ্যাপের প্রধান এন্ট্রি অপশনগুলো কীভাবে ব্যবহার করবেন তা নিচে দেখানো হয়েছে।',
+                    steps: [
+                        { icon: 'fa-plus-circle', label: 'এন্ট্রি যোগ করুন', text: 'প্লাস (+) বাটনে ক্লিক করে নতুন লেনদেন যোগ করুন।' },
+                        { icon: 'fa-wallet', label: 'অ্যাকাউন্ট', text: 'অ্যাকাউন্ট নির্বাচন করে আয়/ব্যয়/স্থানান্তর ঠিক করুন।' },
+                        { icon: 'fa-tags', label: 'ক্যাটাগরি', text: 'ক্যাটাগরি বেছে নিন, তারপর টাকার পরিমাণ লিখুন।' },
+                        { icon: 'fa-calendar-day', label: 'তারিখ ও নোট', text: 'তারিখ, নোট লিখে সেভ করুন।' },
+                        { icon: 'fa-hand-holding-usd', label: 'ঋণ', text: 'ঋণ ট্যাবে ধার নেওয়া বা দেওয়া যোগ করুন।' }
+                    ],
+                    note: 'টিপস: ছোট নোট লিখলে পরে লেনদেন বুঝতে সহজ হয়।'
+                } : {
+                    intro: 'Here is a quick overview of the main entry options in this app.',
+                    steps: [
+                        { icon: 'fa-plus-circle', label: 'Add an entry', text: 'Tap the plus (+) button to create a new transaction.' },
+                        { icon: 'fa-wallet', label: 'Choose account', text: 'Select the account you want to use for income, expense, or transfer.' },
+                        { icon: 'fa-tags', label: 'Pick a category', text: 'Choose a category and enter the amount.' },
+                        { icon: 'fa-calendar-day', label: 'Add details', text: 'Set the date, add an optional note, and save.' },
+                        { icon: 'fa-hand-holding-usd', label: 'Loans', text: 'Use the loans tab for borrowed or lent money.' }
+                    ],
+                    note: 'Tip: Add a short note so you can remember why the entry was made.'
+                };
+
+                content.innerHTML = `
+                    <div class="guide-intro">${guide.intro}</div>
+                    <div class="guide-list">
+                        ${guide.steps.map(step => `
+                            <div class="guide-item">
+                                <div class="guide-icon"><i class="fas ${step.icon}"></i></div>
+                                <div>
+                                    <div class="guide-label">${step.label}</div>
+                                    <div class="guide-text">${step.text}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="guide-note">${guide.note}</div>
+                `;
+                this.openModal('guide-modal');
+            },
         };
 
         // Start
         Auth.init();
+setTimeout(() => { UI.updateLangDisplay(); Auth.syncText(); }, 0);
 
-          // NEW: Register the Service Worker for PWA functionality
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
+          // PWA: register the service worker inside this app's own folder only
+if ('serviceWorker' in navigator) {
+    const hadSW = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !window.__reloading) { window.__reloading = true; location.reload(); } });
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.log('SW failed', err)));
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; const b = document.getElementById('install-banner'); if (b) b.style.display = 'flex'; });
+window.addEventListener('appinstalled', () => { deferredInstall = null; const b = document.getElementById('install-banner'); if (b) b.style.display = 'none'; });
+Object.assign(UI, {
+    async installApp() {
+        if (deferredInstall) { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; }
+        else alert(Lang.t('install_help'));
+    },
+    // Fixes "already installed" / wrong-app glitches: removes this app's old worker + caches, then reloads
+    async fixApp() {
+        try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            const base = location.href.replace(/[^/]*$/, '');
+            await Promise.all(regs.filter(r => r.scope === base).map(r => r.unregister()));
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(k => k.startsWith('family-fin')).map(k => caches.delete(k)));
+        } catch (e) {}
+        location.reload();
+    }
+});
