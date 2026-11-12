@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Family-Fin Cloud</title>
+    <meta name="theme-color" content="#F6F7FB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Family-Fin">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="192.png">
+    <link rel="icon" href="favicon.ico">
     <link rel="manifest" href="manifest.json">
     
     <!-- Libraries -->
@@ -12,6 +19,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
    <link rel="stylesheet" href="style.css">
+   <link rel="stylesheet" href="theme.css">
 
 
 </head>
@@ -29,6 +37,7 @@
   <!-- AUTHENTICATION VIEW -->
 <div id="auth-view" style="display:none;">
     <div class="auth-card">
+        <div style="text-align:right"><span onclick="UI.toggleLanguage()" style="font-size:.8rem;font-weight:700;color:var(--primary);cursor:pointer">বাংলা / EN</span></div>
         <div class="auth-title" id="auth-title-text">Family-Fin Cloud</div>
         <p id="auth-subtitle" style="color:var(--text-secondary); margin-bottom:1.5rem;">Secure Family Expense Tracker</p>
         
@@ -36,9 +45,9 @@
             <!-- Name Input (Hidden for Login) -->
             <input type="text" id="auth-name" class="auth-input" placeholder="Family Name (e.g. Zakir Paribar)" style="display:none;">
             
-            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address" required>
+            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address" data-ph="email" required>
             
-            <input type="password" id="auth-pass" class="auth-input" placeholder="Password" required>
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Password" data-ph="password" required>
             
             <!-- Forgot Password Link (Hidden for Sign Up) -->
             <div id="forgot-pass-link" style="text-align:right; margin-bottom:1.2rem; margin-top:-0.5rem;">
@@ -161,6 +170,13 @@
                     <div id="bulk-items" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
 
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:1rem;">
+                    <div id="tx-guide-label" style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Guide</div>
+                    <button type="button" id="tx-guide-btn" class="btn-secondary" onclick="UI.openGuide()" style="padding:8px 12px; border-radius:12px; font-size:0.78rem; font-weight:700; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary);">
+                        <i class="fas fa-circle-question" style="margin-right:6px;"></i><span id="tx-guide-btn-text">View guide</span>
+                    </button>
+                </div>
+
                 <div class="modal-actions-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem; margin-top:1rem;">
                     <button type="button" class="btn-secondary" id="add-multi-btn" onclick="UI.addToBulk()" style="background:var(--bg-input); border:1px solid var(--border-hover); padding:14px; border-radius:var(--r-sm); font-weight:700; color:var(--text-secondary); cursor:pointer;">
                         <i class="fas fa-plus-circle" style="margin-right:6px;"></i><span data-i18n="add_another">Add Another</span>
@@ -245,17 +261,18 @@
                     <div class="segment-tab active" id="loan-tab-taken" onclick="UI.setLoanType('taken')" data-i18n="loan_taken">Loan Taken</div>
                     <div class="segment-tab" id="loan-tab-given" onclick="UI.setLoanType('given')" data-i18n="loan_given">Loan Given</div>
                 </div>
-                <input type="text" id="loan-person" class="custom-input" placeholder="Person's Name" required>
-                <input type="number" id="loan-amount" class="custom-input" placeholder="Amount" required>
+                <input type="text" id="loan-person" class="custom-input" data-ph="person_ph" placeholder="Person's Name" required>
+                <input type="number" id="loan-amount" class="custom-input" data-ph="amount" placeholder="Amount" required>
                 <div style="margin-bottom:1rem;">
                     <input type="date" id="loan-date" class="custom-input" required>
+                    <input type="date" id="loan-due" class="custom-input" style="margin-top:8px" title="Due date (optional)">
+                    <input type="text" id="loan-note" class="custom-input" style="margin-top:8px" data-ph="note_opt" placeholder="Note (optional)">
                 </div>
-                <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">Select Account</label>
-                <div class="chip-container" id="loan-account-chips"></div>
-                <input type="hidden" id="loan-account">
+                <div class="loan-hint" data-i18n="loan_hint">Loans are tracked separately and never change your wallet balance.</div>
+                <div hidden><div id="loan-account-chips"></div><input type="hidden" id="loan-account"></div>
                 
                 <!-- ADD THIS DIV FOR BALANCE DISPLAY -->
-                <div id="loan-acc-balance" style="font-size: 0.85rem; color: var(--text-tertiary); text-align: right; margin: -10px 0 10px 0; height: 1rem;"></div>
+                <div id="loan-acc-balance" hidden></div>
 
                 <button type="submit" class="btn-primary" data-i18n="save">Save Loan</button>
             </form>
@@ -274,13 +291,10 @@
                 <input type="hidden" id="settle-loan-type">
                 <input type="hidden" id="settle-loan-person">
                 <div id="settle-info" style="margin-bottom: 1rem; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;"></div>
-                <input type="number" id="settle-amount" class="custom-input" placeholder="Settlement Amount" required>
+                <input type="number" id="settle-amount" class="custom-input" data-ph="amount" placeholder="Amount" required>
                 
-                <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.5rem;">Select Account</label>
-                <div class="chip-container" id="settle-account-chips"></div>
-                <input type="hidden" id="settle-account">
-
-                <div id="settle-acc-balance" style="font-size: 0.85rem; color: var(--text-tertiary); text-align: right; margin: -10px 0 10px 0; height: 1rem;"></div>
+                <div class="chip-container"><div class="chip" onclick="UI.fillFullSettle()" data-i18n="full_amount">Full amount</div></div>
+                <div hidden><div id="settle-account-chips"></div><input type="hidden" id="settle-account"><div id="settle-acc-balance"></div></div>
 
 
                 <button type="submit" class="btn-primary" data-i18n="add_payment">Add Payment</button>
@@ -303,7 +317,17 @@
         </div>
     </div>
 
-   <script src="sw.js"></script>
+    <!-- GUIDE MODAL -->
+<div id="guide-modal" class="modal-overlay">
+    <div class="bottom-sheet guide-sheet">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+            <h3 id="guide-title">Quick Guide</h3>
+            <i class="fas fa-times" onclick="UI.closeModals()" style="font-size:1.2rem; cursor:pointer;"></i>
+        </div>
+        <div id="guide-content"></div>
+    </div>
+</div>
+
    <script type="module" src="app.js"></script>
 
 </body>
