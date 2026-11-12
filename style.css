@@ -1308,3 +1308,76 @@ body.lang-bn [class*="-val"] {
         margin: 0 auto;
     }
 }
+
+/* ============================================
+   QUICK GUIDE STYLES
+   ============================================ */
+.guide-sheet {
+    max-height: 82vh;
+}
+
+.guide-intro {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.guide-list {
+    display: grid;
+    gap: 12px;
+}
+
+.guide-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+}
+
+.guide-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--primary-bg);
+    color: var(--primary);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.guide-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+
+.guide-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.guide-note {
+    margin-top: 1rem;
+    background: linear-gradient(135deg, rgba(90,95,224,0.08), rgba(20,163,154,0.08));
+    color: var(--text-primary);
+    border: 1px solid rgba(90,95,224,0.1);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    font-weight: 600;
+}
+
+body.lang-bn .guide-label,
+body.lang-bn .guide-note,
+body.lang-bn .guide-intro,
+body.lang-bn .guide-text {
+    font-family: 'Hind Siliguri', sans-serif;
+}
